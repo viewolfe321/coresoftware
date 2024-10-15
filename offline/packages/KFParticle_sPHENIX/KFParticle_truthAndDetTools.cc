@@ -1,5 +1,7 @@
 #include "KFParticle_truthAndDetTools.h"
 
+#include <fun4all/Fun4AllReturnCodes.h> //for Fun4All to stop yelling at me
+
 #include "KFParticle_Tools.h"  // for KFParticle_Tools
 
 #include <g4eval/SvtxEvalStack.h>   // for SvtxEvalStack
@@ -32,6 +34,15 @@
 #include <phool/PHNodeIterator.h>  // for PHNodeIterator
 #include <phool/getClass.h>        // for getClass
 
+#include <calobase/RawTowerGeomContainer.h> // for calo matching
+#include <calobase/RawCluster.h> // for calo matching
+#include <calobase/RawClusterUtility.h> // for calo matching
+#include <calobase/RawTowerDefs.h> // for calo matching
+#include <calobase/RawTowerGeom.h> // for calo matching
+#include <calobase/TowerInfoContainer.h> // for calo matching
+#include <calobase/TowerInfo.h> // for calo matching
+#include <calobase/TowerInfoDefs.h> // for calo matching
+
 #include <KFParticle.h>  // for KFParticle
 #include <TString.h>     // for TString, operator+
 #include <TTree.h>       // for TTree
@@ -54,6 +65,7 @@
 #include <map>        // for _Rb_tree_iterator, map
 #include <memory>     // for allocator_traits<>::va...
 #include <utility>    // for pair
+#include <vector>     //for vector
 
 class PHNode;
 
@@ -487,11 +499,150 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
 
   track = getTrack(daughter.Id(), dst_trackmap);
 
-  detector_emcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(1));
-  detector_emcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(1));
-  detector_emcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(1));
-  detector_emcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(1));
-  detector_emcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(1));
+
+
+
+  // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ⭐
+
+    if ( !clustersEM ) {
+    clustersEM = findNode::getClass<RawClusterContainer>(topNode, "TOPOCLUSTER_EMCAL");
+    if (!clustersEM)
+    {
+      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "TOPOCLUSTER_EMCAL" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+
+   if(!EMCalGeo)
+  {
+    EMCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_CEMC");
+    if(!EMCalGeo)
+    {
+      std::cout << "EMCalGeo not found! Aborting!" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+
+  double caloRadiusEMCal;
+  // if (m_use_emcal_radius)
+  // {
+  //   caloRadiusEMCal = m_emcal_radius_user;
+  // }
+  // else
+  // {
+    caloRadiusEMCal = EMCalGeo->get_radius();
+  // }
+  
+
+  SvtxTrackState *thisState = nullptr;
+  thisState = track->get_state(caloRadiusEMCal);
+  float _track_phi_emc = NAN;
+  float _track_eta_emc = NAN;
+  float _track_x_emc = NAN;
+  float _track_y_emc = NAN;
+  float _track_z_emc = NAN;
+
+  // if(!thisState)
+  // {
+  //   continue;
+  // }
+  // else
+  // {
+    _track_phi_emc = atan2(thisState->get_y(), thisState->get_x());
+    _track_eta_emc = asinh(thisState->get_z()/sqrt(thisState->get_x()*thisState->get_x() + thisState->get_y()*thisState->get_y()));
+    _track_x_emc = thisState->get_x();
+    _track_y_emc = thisState->get_y();
+    _track_z_emc = thisState->get_z();
+  // }
+
+  //EMCal variables and vectors
+  float _emcal_phi = NAN;
+  float _emcal_eta = NAN;
+  float _emcal_x = NAN;
+  float _emcal_y = NAN;
+  float radius_scale = NAN;
+  float _emcal_z = NAN;
+  // 🟡 float _emcal_3x3 = NAN;
+  // 🟡 float _emcal_5x5 = NAN;
+  // 🟡 float _emcal_clusE = NAN;
+  std::vector<float> v_emcal_phi, v_emcal_eta, v_emcal_x, v_emcal_y, vradius_scale, v_emcal_z, vdphi, vdeta, vdr;
+  
+  //Bool to determine if a match has been found
+  bool is_match = false;
+  
+  //Create objects, containers, iterators for clusters
+  RawCluster *cluster = nullptr;
+  RawClusterContainer::Range begin_end_EMC = clustersEM->getClusters();
+  RawClusterContainer::Iterator clusIter_EMC;
+
+  /// Loop over the EMCal clusters
+  for (clusIter_EMC = begin_end_EMC.first; clusIter_EMC != begin_end_EMC.second; ++clusIter_EMC)
+  {
+    cluster = clusIter_EMC->second;
+    if(cluster->get_energy() < m_emcal_e_low_cut)
+    {
+      continue;
+    }
+
+    _emcal_phi = atan2(cluster->get_y(), cluster->get_x());
+    _emcal_eta = asinh(cluster->get_z()/sqrt(cluster->get_x()*cluster->get_x() + cluster->get_y()*cluster->get_y()));
+    _emcal_x = cluster->get_x();
+    _emcal_y = cluster->get_y();
+    radius_scale = m_emcal_radius_user / sqrt(_emcal_x*_emcal_x+_emcal_y*_emcal_y);
+    _emcal_z = radius_scale*cluster->get_z();
+
+    float dphi = PiRange(_track_phi_emc - _emcal_phi);
+    float dz = _track_z_emc - _emcal_z;
+    float deta = abs(_emcal_eta - _track_eta_emc);
+    float dr = sqrt((dphi*dphi + deta*deta));
+
+    if(fabs(dphi)<m_dphi_cut && fabs(dz)<m_dz_cut)
+    {
+      v_emcal_phi.push_back(_emcal_phi);
+      v_emcal_eta.push_back(_emcal_eta);
+      v_emcal_x.push_back(_emcal_x);
+      v_emcal_y.push_back(_emcal_y);
+      vradius_scale.push_back(radius_scale);
+      v_emcal_z.push_back(_emcal_z);
+      vdphi.push_back(dphi);
+      vdeta.push_back(deta);
+      vdr.push_back(dr);
+      
+      is_match = true;
+    }
+  }
+
+ //CODE TO FIND SMALLEST DR FROM THE VECTORS
+  int index = -1;
+  float tmp = 99999;
+  if (is_match == true)
+  {
+  for(long unsigned int i = 0; i < vdr.size(); i++){
+    if(vdr[i] < tmp){
+      index = i;
+      tmp = vdr[i];
+    }
+  }
+  }
+
+  //Print out statements
+  if(index != -1){
+      std::cout<<"matched tracks!!!"<<std::endl;
+      std::cout<<"emcal x = "<<v_emcal_x[index]<<" , y = "<<v_emcal_y[index]<<" , z = "<<v_emcal_z[index]<<" , phi = "<<v_emcal_phi[index]<<" , eta = "<<v_emcal_eta[index]<<std::endl;
+      std::cout<<"track projected x = "<<_track_x_emc<<" , y = "<<_track_y_emc<<" , z = "<<_track_z_emc<<" , phi = "<<_track_phi_emc<<" , eta = "<<_track_eta_emc<<std::endl;
+      std::cout<<"track px = "<<track->get_px()<<" , py = "<<track->get_py()<<" , pz = "<<track->get_pz()<<" , pt = "<<track->get_pt()<<" , p = "<<track->get_p()<<" , charge = "<<track->get_charge()<<std::endl;
+
+  }
+
+  detector_emcal_deltaphi[daughter_id] = v_emcal_phi[index];
+  detector_emcal_deltaeta[daughter_id] = v_emcal_eta[index];
+  // 🔴 detector_emcal_energy_3x3[daughter_id] = _emcal_3x3;
+  // 🔴 detector_emcal_energy_5x5[daughter_id] = _emcal_5x5;
+  // 🔴 detector_emcal_cluster_energy[daughter_id] = ;
+  // ⭐ Ｅｎｄ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
+
+
+
 
   detector_ihcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(2));
   detector_ihcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(2));

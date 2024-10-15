@@ -2,6 +2,8 @@
 #define KFPARTICLESPHENIX_KFPARTICLETRUTHANDDETTOOLS_H
 
 #include <trackbase/ActsGeometry.h>
+#include <calobase/RawClusterContainer.h>
+#include <calobase/RawTowerGeomContainer.h>
 
 #include <limits>
 #include <string>
@@ -67,7 +69,37 @@ class KFParticle_truthAndDetTools
 
   void clearVectors();
 
+  // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
+  float PiRange(float deltaPhi)
+  {
+    if(deltaPhi > M_PI) deltaPhi -= 2*M_PI;
+    if(deltaPhi < -M_PI) deltaPhi += 2*M_PI;
+    return deltaPhi;
+  }
+  // ⭐ Ｅｎｄ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
+
+
  protected:
+
+  // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
+  RawTowerGeomContainer* EMCalGeo = nullptr;
+  RawClusterContainer* clustersEM = nullptr;
+  // RawTowerGeomContainer* IHCalGeo = nullptr;
+  // RawTowerGeomContainer* OHCalGeo = nullptr;
+  float m_emcal_radius_user = 93.5;
+  float m_ihcal_radius_user = 117;
+  float m_ohcal_radius_user = 177.423;
+
+  float m_track_pt_low_cut = 1.5;
+  float m_emcal_e_low_cut = 1;
+  int m_ntpc_low_cut = 22;
+  float m_dphi_cut = 0.1;
+  float m_dz_cut = 20;
+
+
+  // ⭐ Ｅｎｄ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
+
+
   std::string m_trk_map_node_name_nTuple = "SvtxTrackMap";
   std::string m_vtx_map_node_name_nTuple = "SvtxVertexMap";
 
