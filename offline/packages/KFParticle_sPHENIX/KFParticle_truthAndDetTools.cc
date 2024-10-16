@@ -502,7 +502,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
 
 
 
-  // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ⭐
+  // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
 
     if ( !clustersEM ) {
     clustersEM = findNode::getClass<RawClusterContainer>(topNode, "TOPOCLUSTER_EMCAL");
@@ -524,7 +524,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
   }
 
   double caloRadiusEMCal;
-  // if (m_use_emcal_radius)
+  // if (m_use_emcal_radius)  // ❓ Needs to be included? Commented out because I wasn't sure the purpose of this if statement
   // {
   //   caloRadiusEMCal = m_emcal_radius_user;
   // }
@@ -533,7 +533,6 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     caloRadiusEMCal = EMCalGeo->get_radius();
   // }
   
-
   SvtxTrackState *thisState = nullptr;
   thisState = track->get_state(caloRadiusEMCal);
   float _track_phi_emc = NAN;
@@ -562,9 +561,9 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
   float _emcal_y = NAN;
   float radius_scale = NAN;
   float _emcal_z = NAN;
-  // 🟡 float _emcal_3x3 = NAN;
+  // 🟡 float _emcal_3x3 = NAN; (Remove // once functions for these energies are included)
   // 🟡 float _emcal_5x5 = NAN;
-  // 🟡 float _emcal_clusE = NAN;
+  // 🟡 float _emcal_clusE = NAN; (How to get this?)
   std::vector<float> v_emcal_phi, v_emcal_eta, v_emcal_x, v_emcal_y, vradius_scale, v_emcal_z, vdphi, vdeta, vdr;
   
   //Bool to determine if a match has been found
@@ -578,12 +577,15 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
   /// Loop over the EMCal clusters
   for (clusIter_EMC = begin_end_EMC.first; clusIter_EMC != begin_end_EMC.second; ++clusIter_EMC)
   {
+    
+    //Minimum energy cut
     cluster = clusIter_EMC->second;
     if(cluster->get_energy() < m_emcal_e_low_cut)
     {
       continue;
     }
 
+    //Get cluster information
     _emcal_phi = atan2(cluster->get_y(), cluster->get_x());
     _emcal_eta = asinh(cluster->get_z()/sqrt(cluster->get_x()*cluster->get_x() + cluster->get_y()*cluster->get_y()));
     _emcal_x = cluster->get_x();
@@ -591,13 +593,16 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     radius_scale = m_emcal_radius_user / sqrt(_emcal_x*_emcal_x+_emcal_y*_emcal_y);
     _emcal_z = radius_scale*cluster->get_z();
 
+    //Variables to determine potential matches
     float dphi = PiRange(_track_phi_emc - _emcal_phi);
     float dz = _track_z_emc - _emcal_z;
     float deta = abs(_emcal_eta - _track_eta_emc);
     float dr = sqrt((dphi*dphi + deta*deta));
 
+    //Requirements for a possible match
     if(fabs(dphi)<m_dphi_cut && fabs(dz)<m_dz_cut)
     {
+      //Add potential match's information to vectors
       v_emcal_phi.push_back(_emcal_phi);
       v_emcal_eta.push_back(_emcal_eta);
       v_emcal_x.push_back(_emcal_x);
@@ -612,7 +617,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     }
   }
 
- //CODE TO FIND SMALLEST DR FROM THE VECTORS
+ //Find the closest match from all potential matches
   int index = -1;
   float tmp = 99999;
   if (is_match == true)
@@ -636,6 +641,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
 
   detector_emcal_deltaphi[daughter_id] = v_emcal_phi[index];
   detector_emcal_deltaeta[daughter_id] = v_emcal_eta[index];
+  //Branches to be filled when code for EMCal energies is included:
   // 🔴 detector_emcal_energy_3x3[daughter_id] = _emcal_3x3;
   // 🔴 detector_emcal_energy_5x5[daughter_id] = _emcal_5x5;
   // 🔴 detector_emcal_cluster_energy[daughter_id] = ;
@@ -643,18 +649,18 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
 
 
 
+  //To be updated when HCal code is written:
+  // detector_ihcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(2));
+  // detector_ihcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(2));
+  // detector_ihcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(2));
+  // detector_ihcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(2));
+  // detector_ihcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(2));
 
-  detector_ihcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(2));
-  detector_ihcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(2));
-  detector_ihcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(2));
-  detector_ihcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(2));
-  detector_ihcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(2));
-
-  detector_ohcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(3));
-  detector_ohcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(3));
-  detector_ohcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(3));
-  detector_ohcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(3));
-  detector_ohcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(3));
+  // detector_ohcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(3));
+  // detector_ohcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(3));
+  // detector_ohcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(3));
+  // detector_ohcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(3));
+  // detector_ohcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(3));
 }
 
 void KFParticle_truthAndDetTools::initializeDetectorBranches(TTree *m_tree, int daughter_id, const std::string &daughter_number)
