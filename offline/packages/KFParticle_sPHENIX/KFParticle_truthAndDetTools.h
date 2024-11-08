@@ -4,6 +4,8 @@
 #include <trackbase/ActsGeometry.h>
 #include <calobase/RawClusterContainer.h>
 #include <calobase/RawTowerGeomContainer.h>
+#include <calobase/RawTowerContainer.h>
+
 
 #include <limits>
 #include <string>
@@ -55,6 +57,8 @@ class KFParticle_truthAndDetTools
   void fillHepMCBranch(HepMC::GenParticle *particle, int daughter_id);
   int getHepMCInfo(PHCompositeNode *topNode, TTree *m_tree, const KFParticle &daughter, int daughter_id);
 
+  float get_e3x3(RawCluster *cluster, RawTowerContainer *Towers, int layer);
+
   void initializeCaloBranches(TTree *m_tree, int daughter_id, const std::string &daughter_number);
   void fillCaloBranch(PHCompositeNode *topNode, TTree *m_tree, const KFParticle &daughter, int daughter_id);
 
@@ -84,14 +88,24 @@ class KFParticle_truthAndDetTools
   // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
   RawTowerGeomContainer* EMCalGeo = nullptr;
   RawClusterContainer* clustersEM = nullptr;
-  // RawTowerGeomContainer* IHCalGeo = nullptr;
-  // RawTowerGeomContainer* OHCalGeo = nullptr;
+  RawTowerGeomContainer* IHCalGeo = nullptr;
+  RawClusterContainer* clustersIH = nullptr;
+  RawTowerGeomContainer* OHCalGeo = nullptr;
+  RawClusterContainer* clustersOH = nullptr;
+  RawTowerContainer* _towersEM = nullptr;
+  RawTowerContainer* _towersIH = nullptr;
+  RawTowerContainer* _towersOH = nullptr;
+  
+  
   float m_emcal_radius_user = 93.5;
   float m_ihcal_radius_user = 117;
   float m_ohcal_radius_user = 177.423;
 
+
   float m_track_pt_low_cut = 1.5;
   float m_emcal_e_low_cut = 1;
+  float m_ihcal_e_low_cut = 1;
+  float m_ohcal_e_low_cut = 1;
   int m_ntpc_low_cut = 22;
   float m_dphi_cut = 0.1;
   float m_dz_cut = 20;
@@ -166,6 +180,10 @@ class KFParticle_truthAndDetTools
   float detector_ohcal_energy_3x3[max_tracks] = {std::numeric_limits<float>::quiet_NaN()};
   float detector_ohcal_energy_5x5[max_tracks] = {std::numeric_limits<float>::quiet_NaN()};
   float detector_ohcal_cluster_energy[max_tracks] = {std::numeric_limits<float>::quiet_NaN()};
+
+  unsigned int detector_nHits_EMCal[max_tracks] = {0};
+  unsigned int detector_nHits_IHCal[max_tracks] = {0};
+  unsigned int detector_nHits_OHCal[max_tracks] =  {0};
 
   unsigned int detector_nHits_MVTX[max_tracks] = {0};
   unsigned int detector_nHits_INTT[max_tracks] = {0};

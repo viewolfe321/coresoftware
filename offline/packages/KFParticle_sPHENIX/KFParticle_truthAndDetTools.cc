@@ -39,6 +39,8 @@
 #include <calobase/RawClusterUtility.h> // for calo matching
 #include <calobase/RawTowerDefs.h> // for calo matching
 #include <calobase/RawTowerGeom.h> // for calo matching
+#include <calobase/RawTowerv2.h> // for calo matching
+#include <calobase/RawTowerContainer.h> // for calo matching
 #include <calobase/TowerInfoContainer.h> // for calo matching
 #include <calobase/TowerInfo.h> // for calo matching
 #include <calobase/TowerInfoDefs.h> // for calo matching
@@ -481,7 +483,159 @@ void KFParticle_truthAndDetTools::initializeCaloBranches(TTree *m_tree, int daug
   m_tree->Branch(TString(daughter_number) + "_OHCAL_energy_3x3", &detector_ohcal_energy_3x3[daughter_id], TString(daughter_number) + "_OHCAL_energy_3x3/F");
   m_tree->Branch(TString(daughter_number) + "_OHCAL_energy_5x5", &detector_ohcal_energy_5x5[daughter_id], TString(daughter_number) + "_OHCAL_energy_5x5/F");
   m_tree->Branch(TString(daughter_number) + "_OHCAL_energy_cluster", &detector_ohcal_cluster_energy[daughter_id], TString(daughter_number) + "_OHCAL_energy_cluster/F");
+
+
 }
+
+// double KFParticle_truthAndDetTools::Get_CAL_e3x3(
+//   SvtxTrack* track, 
+//   RawTowerContainer* _towersRawOH, 
+//   RawTowerGeomContainer* _geomOH, 
+//   int what, 
+//   double Zvtx, 
+//   double &dphi, 
+//   double &deta) {
+
+// double e3x3 = 0.;
+// double pathlength = 999.;
+// // vector<double> proj;
+// // for (SvtxTrack::StateIter stateiter = track->begin_states(); stateiter != track->end_states(); ++stateiter)
+// // {
+// //   SvtxTrackState *trackstate = stateiter->second;
+// //   if(trackstate) { proj.push_back(trackstate->get_pathlength()); }
+// // }
+// // if(what==0)      { pathlength = proj[proj.size()-3]; } // CEMC
+// // else if(what==1) { pathlength = proj[proj.size()-2]; } // HCALIN
+// // else if(what==2) { pathlength = proj[proj.size()-1]; } // HCALOUT
+// // else { dphi = 9999.; deta = 9999.; return e3x3;}
+
+//   double track_eta = 999.;
+//   double track_phi = 999.;
+//   SvtxTrackState* trackstate = track->get_state(pathlength);
+//   if(trackstate) {
+//     double track_x = trackstate->get_x();
+//     double track_y = trackstate->get_y();
+//     double track_z = trackstate->get_z() - Zvtx;
+//     double track_r = sqrt(track_x*track_x+track_y*track_y);
+//     track_eta = asinh( track_z / track_r );
+//     track_phi = atan2( track_y, track_x );
+//   } else { cout << "track state not found!" << endl; dphi = 9999.; deta = 9999.; return e3x3; }
+
+//   double dist = 9999.;
+//   RawTower* thetower = nullptr;
+//   RawTowerContainer::ConstRange begin_end_rawOH = _towersRawOH->getTowers();
+//   for (RawTowerContainer::ConstIterator rtiter = begin_end_rawOH.first; rtiter != begin_end_rawOH.second; ++rtiter) {
+//     RawTower *tower = rtiter->second;
+//     RawTowerGeom *tower_geom = _geomOH->get_tower_geometry(tower->get_key());
+//     //double tower_phi  = tower_geom->get_phi();
+//     double tower_x = tower_geom->get_center_x();
+//     double tower_y = tower_geom->get_center_y();
+//     double tower_z = tower_geom->get_center_z() - Zvtx; // correct for event vertex
+//     double tower_r = sqrt(pow(tower_x,2)+pow(tower_y,2));
+//     double tower_eta = asinh( tower_z / tower_r );
+//     double tower_phi = atan2( tower_y , tower_x );
+//     double tmpdist = sqrt(pow(track_eta-tower_eta,2)+pow(track_phi-tower_phi,2));
+//     if(tmpdist<dist) { dist = tmpdist; thetower = tower; deta = fabs(track_eta-tower_eta); dphi = fabs(track_phi-tower_phi); }
+//   }
+//   //cout << "dist: " << dist << " " << deta << " " << dphi << endl;
+
+//   if(!thetower) { dphi = 9999.; deta = 9999.; return e3x3; }
+//   RawTowerGeom *thetower_geom = _geomOH->get_tower_geometry(thetower->get_key());
+//   unsigned int ieta = thetower_geom->get_bineta();
+//   unsigned int jphi = thetower_geom->get_binphi();
+
+//   unsigned int maxbinphi = 63; if(what==0) maxbinphi = 255;
+//   unsigned int maxbineta = 23; if(what==0) maxbineta = 93;
+//     // calculate e3x3
+//     for(unsigned int i=0; i<=2; i++) {
+//       for(unsigned int j=0; j<=2; j++) {
+//         unsigned int itmp = ieta-1+i;
+//         unsigned int jtmp = 0;
+//         if(jphi==0 && j==0) { jtmp = maxbinphi; }      // wrap around
+//         else if(jphi==maxbinphi && j==2) { jtmp = 0; } // wrap around
+//         else { jtmp = jphi-1+j; }
+//         if(itmp>=0 && itmp<=maxbineta) { 
+//           RawTower* tmptower = _towersRawOH->getTower(itmp,jtmp);
+//           if(tmptower) { e3x3 += tmptower->get_energy(); }
+//         }
+//       }
+//     }
+
+//   return e3x3;
+// }
+
+
+
+
+float KFParticle_truthAndDetTools::get_e3x3(RawCluster *cluster, RawTowerContainer *Towers, int layer){
+  
+  std::vector<float> _emcal_tower_phi;
+  std::vector<float> _emcal_tower_eta;
+  std::vector<float> _emcal_tower_e;
+  std::vector<int> _emcal_tower_phi_bin;
+  std::vector<int> _emcal_tower_eta_bin;
+  float energy;
+  float tmp = 0;
+  int index = -1;
+  int ijk = 0;
+  float e3x3 = 0;
+
+  RawCluster::TowerConstRange towers = cluster->get_towers();
+  RawCluster::TowerConstIterator toweriter;
+
+  // TowerInfo *towerInfo = nullptr;
+
+  for (toweriter = towers.first; toweriter != towers.second; ++toweriter)
+  {
+
+    energy = toweriter->second;
+
+    // _emcal_tower_cluster_id.push_back(clusIter_EMC->first);
+    RawTowerGeom *tower_geom = EMCalGeo->get_tower_geometry(toweriter->first);
+    _emcal_tower_phi.push_back(tower_geom->get_phi());
+    _emcal_tower_eta.push_back(tower_geom->get_eta());
+    _emcal_tower_e.push_back(energy);
+
+    _emcal_tower_phi_bin.push_back(tower_geom->get_bineta());
+    _emcal_tower_eta_bin.push_back(tower_geom->get_binphi());
+
+    // unsigned int key = TowerInfoDefs::encode_emcal(tower_geom->get_bineta(), tower_geom->get_binphi());
+    // towerInfo = EMCAL_Container->get_tower_at_key(key);
+    // _emcal_tower_status.push_back(towerInfo->get_status());
+
+    if(energy > tmp){
+      index = ijk;
+      tmp = energy;
+    }
+
+    ijk++;
+
+  }
+
+  int ieta = _emcal_tower_eta_bin[index];
+  int jphi = _emcal_tower_phi_bin[index];
+
+  int maxbinphi = 63; if(layer==0) maxbinphi = 255;
+  int maxbineta = 23; if(layer==0) maxbineta = 93;
+    // calculate e3x3
+    for(int i=0; i<=2; i++) {
+      for(int j=0; j<=2; j++) {
+        int itmp = ieta-1+i;
+        int jtmp = 0;
+        if(jphi==0 && j==0) { jtmp = maxbinphi; }      // wrap around
+        else if(jphi==maxbinphi && j==2) { jtmp = 0; } // wrap around
+        else { jtmp = jphi-1+j; }
+        if(itmp>=0 && itmp<=maxbineta) { 
+          RawTower* tmptower = Towers->getTower(itmp,jtmp);
+          if(tmptower) { e3x3 += tmptower->get_energy(); }
+        }
+      }
+    }
+
+  return e3x3;
+
+}
+
 
 void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
                                                  TTree * /*m_tree*/, const KFParticle &daughter, int daughter_id)
@@ -499,21 +653,16 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
 
   track = getTrack(daughter.Id(), dst_trackmap);
 
-
-
-
   // ⭐ Ｓｔａｒｔ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
-
-    if ( !clustersEM ) {
-    clustersEM = findNode::getClass<RawClusterContainer>(topNode, "TOPOCLUSTER_EMCAL");
+  if ( !clustersEM ) {
+    clustersEM = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_CEMC");
     if (!clustersEM)
     {
-      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "TOPOCLUSTER_EMCAL" << std::endl;
+      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_CEMC" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
-
-   if(!EMCalGeo)
+  if(!EMCalGeo)
   {
     EMCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_CEMC");
     if(!EMCalGeo)
@@ -522,17 +671,84 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
+  if(!_towersEM) 
+  {
+    _towersEM = findNode::getClass<RawTowerContainer>(topNode, "TOWER_CALIB_CEMC");
+    if(!_towersEM) 
+    {
+      std::cout << "No TOWER_CALIB_CEMC Node" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+  if ( !clustersIH ) {
+    clustersIH = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_HCALIN");
+    if (!clustersIH)
+    {
+      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_HCALIN" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+  if(!IHCalGeo)
+  {
+    IHCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
+    if(!IHCalGeo)
+    {
+      std::cout << "IHCalGeo not found! Aborting!" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+  if(!_towersIH) 
+  {
+    _towersIH = findNode::getClass<RawTowerContainer>(topNode, "TOWER_CALIB_HCALIN");
+    if(!_towersIH) 
+    {
+      std::cout << "No TOWER_CALIB_HCALIN Node" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+   if ( !clustersOH ) {
+    clustersOH = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_HCALIN");
+    if (!clustersOH)
+    {
+      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_HCALIN" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+  if(!OHCalGeo)
+  {
+    OHCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
+    if(!OHCalGeo)
+    {
+      std::cout << "OHCalGeo not found! Aborting!" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
+  if(!_towersOH) 
+  {
+    _towersOH = findNode::getClass<RawTowerContainer>(topNode, "TOWER_CALIB_HCALOUT");
+    if(!_towersOH) 
+    {
+      std::cout << "No TOWER_CALIB_HCALOUT Node" << std::endl;
+      //return Fun4AllReturnCodes::ABORTEVENT;
+    }
+  }
 
+  // Radii for track projections
   double caloRadiusEMCal;
-  // if (m_use_emcal_radius)  // ❓ Needs to be included? Commented out because I wasn't sure the purpose of this if statement
-  // {
-  //   caloRadiusEMCal = m_emcal_radius_user;
-  // }
-  // else
-  // {
-    caloRadiusEMCal = EMCalGeo->get_radius();
-  // }
-  
+  double caloRadiusIHCal;
+  double caloRadiusOHCal;
+  caloRadiusEMCal = EMCalGeo->get_radius();
+  caloRadiusOHCal = OHCalGeo->get_radius();
+  caloRadiusIHCal = IHCalGeo->get_radius();
+
+  // Create variables and containers etc.
+  bool is_match;
+  int index;
+  float radius_scale;
+  RawCluster *cluster;
+
+
+//EMCAL******************************************************
   SvtxTrackState *thisState = nullptr;
   thisState = track->get_state(caloRadiusEMCal);
   float _track_phi_emc = NAN;
@@ -541,40 +757,44 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
   float _track_y_emc = NAN;
   float _track_z_emc = NAN;
 
-  // if(!thisState)
-  // {
-  //   continue;
-  // }
-  // else
-  // {
-    _track_phi_emc = atan2(thisState->get_y(), thisState->get_x());
-    _track_eta_emc = asinh(thisState->get_z()/sqrt(thisState->get_x()*thisState->get_x() + thisState->get_y()*thisState->get_y()));
-    _track_x_emc = thisState->get_x();
-    _track_y_emc = thisState->get_y();
-    _track_z_emc = thisState->get_z();
-  // }
+  _track_phi_emc = atan2(thisState->get_y(), thisState->get_x());
+  _track_eta_emc = asinh(thisState->get_z()/sqrt(thisState->get_x()*thisState->get_x() + thisState->get_y()*thisState->get_y()));
+  _track_x_emc = thisState->get_x();
+  _track_y_emc = thisState->get_y();
+  _track_z_emc = thisState->get_z();
 
-  //EMCal variables and vectors
+  // EMCal variables and vectors
   float _emcal_phi = NAN;
   float _emcal_eta = NAN;
   float _emcal_x = NAN;
   float _emcal_y = NAN;
-  float radius_scale = NAN;
   float _emcal_z = NAN;
-  // 🟡 float _emcal_3x3 = NAN; (Remove // once functions for these energies are included)
-  // 🟡 float _emcal_5x5 = NAN;
-  // 🟡 float _emcal_clusE = NAN; (How to get this?)
-  std::vector<float> v_emcal_phi, v_emcal_eta, v_emcal_x, v_emcal_y, vradius_scale, v_emcal_z, vdphi, vdeta, vdr;
+  radius_scale = NAN;
+  float _emcal_3x3 = NAN;
+  //float _emcal_5x5 = NAN;
+  float _emcal_clusE = NAN;
+  std::vector<float> v_emcal_phi;
+  std::vector<float> v_emcal_eta;
+  std::vector<float> v_emcal_x;
+  std::vector<float> v_emcal_y;
+  std::vector<float> v_emcal_z;
+  std::vector<float> v_emcal_dphi;
+  std::vector<float> v_emcal_deta;
+  std::vector<float> v_emcal_dr;
+  std::vector<float> v_emcal_3x3;
+  //std::vector<float> v_emcal_5x5;
+  std::vector<float> v_emcal_clusE;
   
-  //Bool to determine if a match has been found
-  bool is_match = false;
+  // Set variables for matching
+  is_match = false;
+  index = -1;
   
-  //Create objects, containers, iterators for clusters
-  RawCluster *cluster = nullptr;
+  // Create objects, containers, iterators for clusters
+  cluster = nullptr;
   RawClusterContainer::Range begin_end_EMC = clustersEM->getClusters();
   RawClusterContainer::Iterator clusIter_EMC;
 
-  /// Loop over the EMCal clusters
+  // Loop over the EMCal clusters
   for (clusIter_EMC = begin_end_EMC.first; clusIter_EMC != begin_end_EMC.second; ++clusIter_EMC)
   {
     
@@ -585,13 +805,15 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
       continue;
     }
 
-    //Get cluster information
+    // Get cluster information
     _emcal_phi = atan2(cluster->get_y(), cluster->get_x());
     _emcal_eta = asinh(cluster->get_z()/sqrt(cluster->get_x()*cluster->get_x() + cluster->get_y()*cluster->get_y()));
     _emcal_x = cluster->get_x();
     _emcal_y = cluster->get_y();
     radius_scale = m_emcal_radius_user / sqrt(_emcal_x*_emcal_x+_emcal_y*_emcal_y);
     _emcal_z = radius_scale*cluster->get_z();
+    _emcal_3x3 = get_e3x3(cluster, _towersEM, 0); //0 for emcal
+    _emcal_clusE = cluster->get_energy();
 
     //Variables to determine potential matches
     float dphi = PiRange(_track_phi_emc - _emcal_phi);
@@ -599,38 +821,38 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     float deta = abs(_emcal_eta - _track_eta_emc);
     float dr = sqrt((dphi*dphi + deta*deta));
 
-    //Requirements for a possible match
+    // Requirements for a possible match
     if(fabs(dphi)<m_dphi_cut && fabs(dz)<m_dz_cut)
     {
-      //Add potential match's information to vectors
+      // Add potential match's information to vectors
       v_emcal_phi.push_back(_emcal_phi);
       v_emcal_eta.push_back(_emcal_eta);
       v_emcal_x.push_back(_emcal_x);
       v_emcal_y.push_back(_emcal_y);
-      vradius_scale.push_back(radius_scale);
       v_emcal_z.push_back(_emcal_z);
-      vdphi.push_back(dphi);
-      vdeta.push_back(deta);
-      vdr.push_back(dr);
+      v_emcal_dphi.push_back(dphi);
+      v_emcal_deta.push_back(deta);
+      v_emcal_dr.push_back(dr);
+      v_emcal_3x3.push_back(_emcal_3x3);
+      v_emcal_clusE.push_back(_emcal_clusE);
       
       is_match = true;
     }
   }
 
- //Find the closest match from all potential matches
-  int index = -1;
-  float tmp = 99999;
+ // Find the closest match from all potential matches
   if (is_match == true)
   {
-  for(long unsigned int i = 0; i < vdr.size(); i++){
-    if(vdr[i] < tmp){
+  float tmp = 99999;
+  for(long unsigned int i = 0; i < v_emcal_dr.size(); i++){
+    if(v_emcal_dr[i] < tmp){
       index = i;
-      tmp = vdr[i];
+      tmp = v_emcal_dr[i];
     }
   }
   }
 
-  //Print out statements
+  // Print out statements
   if(index != -1){
       std::cout<<"matched tracks!!!"<<std::endl;
       std::cout<<"emcal x = "<<v_emcal_x[index]<<" , y = "<<v_emcal_y[index]<<" , z = "<<v_emcal_z[index]<<" , phi = "<<v_emcal_phi[index]<<" , eta = "<<v_emcal_eta[index]<<std::endl;
@@ -639,28 +861,261 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
 
   }
 
+  // Save values to the branches!
   detector_emcal_deltaphi[daughter_id] = v_emcal_phi[index];
   detector_emcal_deltaeta[daughter_id] = v_emcal_eta[index];
-  //Branches to be filled when code for EMCal energies is included:
-  // 🔴 detector_emcal_energy_3x3[daughter_id] = _emcal_3x3;
-  // 🔴 detector_emcal_energy_5x5[daughter_id] = _emcal_5x5;
-  // 🔴 detector_emcal_cluster_energy[daughter_id] = ;
+  detector_emcal_energy_3x3[daughter_id] = v_emcal_3x3[index];
+  //detector_emcal_energy_5x5[daughter_id] = _emcal_5x5;
+  detector_emcal_cluster_energy[daughter_id] = v_emcal_clusE[index];
+  
+
+//HCAL*******************************************************
+
+//INNER
+  // Track projection
+  thisState = nullptr;
+  thisState = track->get_state(caloRadiusIHCal);
+  float _track_phi_ihc = NAN;
+  float _track_eta_ihc = NAN;
+  float _track_x_ihc = NAN;
+  float _track_y_ihc = NAN;
+  float _track_z_ihc = NAN;
+
+  _track_phi_ihc = atan2(thisState->get_y(), thisState->get_x());
+  _track_eta_ihc = asinh(thisState->get_z()/sqrt(thisState->get_x()*thisState->get_x() + thisState->get_y()*thisState->get_y()));
+  _track_x_ihc = thisState->get_x();
+  _track_y_ihc = thisState->get_y();
+  _track_z_ihc = thisState->get_z();
+
+  // IHCal variables and vectors
+  float _ihcal_phi = NAN;
+  float _ihcal_eta = NAN;
+  float _ihcal_x = NAN;
+  float _ihcal_y = NAN;
+  float _ihcal_z = NAN;
+  float _ihcal_3x3 = NAN;
+  //float _ihcal_5x5 = NAN;
+  float _ihcal_clusE = NAN;
+  radius_scale = NAN;
+  std::vector<float> v_ihcal_phi;
+  std::vector<float> v_ihcal_eta;
+  std::vector<float> v_ihcal_x;
+  std::vector<float> v_ihcal_y;
+  std::vector<float> v_ihcal_z;
+  std::vector<float> v_ihcal_dphi;
+  std::vector<float> v_ihcal_deta;
+  std::vector<float> v_ihcal_dr;
+  std::vector<float> v_ihcal_3x3;
+  //std::vector<float> v_ihcal_5x5;
+  std::vector<float> v_ihcal_clusE;
+  
+  // Reset variables for matching
+  is_match = false;
+  index = -1;
+  
+  // Create objects, containers, iterators for clusters
+  cluster = nullptr;
+  RawClusterContainer::Range begin_end_IHC = clustersIH->getClusters();
+  RawClusterContainer::Iterator clusIter_IHC;
+
+  // Loop over the IHCal clusters
+  for (clusIter_IHC = begin_end_IHC.first; clusIter_IHC != begin_end_IHC.second; ++clusIter_IHC)
+  {
+    
+    // Minimum energy cut
+    cluster = clusIter_IHC->second;
+    if(cluster->get_energy() < m_ihcal_e_low_cut)
+    {
+      continue;
+    }
+
+    // Get cluster information
+    _ihcal_phi = atan2(cluster->get_y(), cluster->get_x());
+    _ihcal_eta = asinh(cluster->get_z()/sqrt(cluster->get_x()*cluster->get_x() + cluster->get_y()*cluster->get_y()));
+    _ihcal_x = cluster->get_x();
+    _ihcal_y = cluster->get_y();
+    radius_scale = m_ihcal_radius_user / sqrt(_ihcal_x*_ihcal_x+_ihcal_y*_ihcal_y);
+    _ihcal_z = radius_scale*cluster->get_z();
+    _ihcal_3x3 = get_e3x3(cluster, _towersIH, 1); //1 for ihcal
+    _ihcal_clusE = cluster->get_energy();
+
+    // Variables to determine potential matches
+    float dphi = PiRange(_track_phi_ihc - _ihcal_phi);
+    float dz = _track_z_ihc - _ihcal_z;
+    float deta = abs(_ihcal_eta - _track_eta_ihc);
+    float dr = sqrt((dphi*dphi + deta*deta));
+
+    // Requirements for a possible match
+    if(fabs(dphi)<m_dphi_cut && fabs(dz)<m_dz_cut)
+    {
+      //Add potential match's information to vectors
+      v_ihcal_phi.push_back(_ihcal_phi);
+      v_ihcal_eta.push_back(_ihcal_eta);
+      v_ihcal_x.push_back(_ihcal_x);
+      v_ihcal_y.push_back(_ihcal_y);
+      v_ihcal_z.push_back(_ihcal_z);
+      v_ihcal_dphi.push_back(dphi);
+      v_ihcal_deta.push_back(deta);
+      v_ihcal_dr.push_back(dr);
+      v_ihcal_3x3.push_back(_ihcal_3x3);
+      v_ihcal_clusE.push_back(_ihcal_clusE);
+      
+      is_match = true;
+    }
+  }
+
+ // Find the closest match from all potential matches
+  if (is_match == true)
+  {
+  float tmp = 99999;
+  for(long unsigned int i = 0; i < v_ihcal_dr.size(); i++){
+    if(v_ihcal_dr[i] < tmp){
+      index = i;
+      tmp = v_ihcal_dr[i];
+    }
+  }
+  }
+
+  // Print out statihents
+  if(index != -1){
+      std::cout<<"matched tracks!!!"<<std::endl;
+      std::cout<<"ihcal x = "<<v_ihcal_x[index]<<" , y = "<<v_ihcal_y[index]<<" , z = "<<v_ihcal_z[index]<<" , phi = "<<v_ihcal_phi[index]<<" , eta = "<<v_ihcal_eta[index]<<std::endl;
+      std::cout<<"track projected x = "<<_track_x_ihc<<" , y = "<<_track_y_ihc<<" , z = "<<_track_z_ihc<<" , phi = "<<_track_phi_ihc<<" , eta = "<<_track_eta_ihc<<std::endl;
+      std::cout<<"track px = "<<track->get_px()<<" , py = "<<track->get_py()<<" , pz = "<<track->get_pz()<<" , pt = "<<track->get_pt()<<" , p = "<<track->get_p()<<" , charge = "<<track->get_charge()<<std::endl;
+
+  }
+
+  // Save values to the branches!
+  detector_ihcal_deltaphi[daughter_id] = v_ihcal_phi[index];
+  detector_ihcal_deltaeta[daughter_id] = v_ihcal_eta[index];
+  detector_ihcal_energy_3x3[daughter_id] = v_ihcal_3x3[index];
+  // detector_ihcal_energy_5x5[daughter_id] = _ihcal_5x5;
+  detector_ihcal_cluster_energy[daughter_id] = v_ihcal_clusE[index];
+
+
+
+//OUTER
+  // Track projection
+  thisState = nullptr;
+  thisState = track->get_state(caloRadiusOHCal);
+  float _track_phi_ohc = NAN;
+  float _track_eta_ohc = NAN;
+  float _track_x_ohc = NAN;
+  float _track_y_ohc = NAN;
+  float _track_z_ohc = NAN;
+
+  _track_phi_ohc = atan2(thisState->get_y(), thisState->get_x());
+  _track_eta_ohc = asinh(thisState->get_z()/sqrt(thisState->get_x()*thisState->get_x() + thisState->get_y()*thisState->get_y()));
+  _track_x_ohc = thisState->get_x();
+  _track_y_ohc = thisState->get_y();
+  _track_z_ohc = thisState->get_z();
+
+  // OHCal variables and vectors
+  float _ohcal_phi = NAN;
+  float _ohcal_eta = NAN;
+  float _ohcal_x = NAN;
+  float _ohcal_y = NAN;
+  float _ohcal_z = NAN;
+  float _ohcal_3x3 = NAN;
+  //float _ohcal_5x5 = NAN;
+  float _ohcal_clusE = NAN;
+  radius_scale = NAN;
+  std::vector<float> v_ohcal_phi;
+  std::vector<float> v_ohcal_eta;
+  std::vector<float> v_ohcal_x;
+  std::vector<float> v_ohcal_y;
+  std::vector<float> v_ohcal_z;
+  std::vector<float> v_ohcal_dphi;
+  std::vector<float> v_ohcal_deta;
+  std::vector<float> v_ohcal_dr;
+  std::vector<float> v_ohcal_3x3;
+  //std::vector<float> v_ohcal_5x5;
+  std::vector<float> v_ohcal_clusE;
+  
+  // Reset variables for matching
+  is_match = false;
+  index = -1;
+  
+  // Create objects, containers, iterators for clusters
+  cluster = nullptr;
+  RawClusterContainer::Range begin_end_OHC = clustersOH->getClusters();
+  RawClusterContainer::Iterator clusIter_OHC;
+
+  // Loop over the OHCal clusters
+  for (clusIter_OHC = begin_end_OHC.first; clusIter_OHC != begin_end_OHC.second; ++clusIter_OHC)
+  {
+    
+    // Minimum energy cut
+    cluster = clusIter_OHC->second;
+    if(cluster->get_energy() < m_ohcal_e_low_cut)
+    {
+      continue;
+    }
+
+    // Get cluster information
+    _ohcal_phi = atan2(cluster->get_y(), cluster->get_x());
+    _ohcal_eta = asinh(cluster->get_z()/sqrt(cluster->get_x()*cluster->get_x() + cluster->get_y()*cluster->get_y()));
+    _ohcal_x = cluster->get_x();
+    _ohcal_y = cluster->get_y();
+    radius_scale = m_ohcal_radius_user / sqrt(_ohcal_x*_ohcal_x+_ohcal_y*_ohcal_y);
+    _ohcal_z = radius_scale*cluster->get_z();
+    _ohcal_3x3 = get_e3x3(cluster, _towersOH, 2); //2 for ohcal
+    _ohcal_clusE = cluster->get_energy();
+
+    // Variables to determine potential matches
+    float dphi = PiRange(_track_phi_ohc - _ohcal_phi);
+    float dz = _track_z_ohc - _ohcal_z;
+    float deta = abs(_ohcal_eta - _track_eta_ohc);
+    float dr = sqrt((dphi*dphi + deta*deta));
+
+    // Requirohents for a possible match
+    if(fabs(dphi)<m_dphi_cut && fabs(dz)<m_dz_cut)
+    {
+      //Add potential match's information to vectors
+      v_ohcal_phi.push_back(_ohcal_phi);
+      v_ohcal_eta.push_back(_ohcal_eta);
+      v_ohcal_x.push_back(_ohcal_x);
+      v_ohcal_y.push_back(_ohcal_y);
+      v_ohcal_z.push_back(_ohcal_z);
+      v_ohcal_dphi.push_back(dphi);
+      v_ohcal_deta.push_back(deta);
+      v_ohcal_dr.push_back(dr);
+      v_ohcal_3x3.push_back(_ohcal_3x3);
+      v_ohcal_clusE.push_back(_ohcal_clusE);
+      
+      is_match = true;
+    }
+  }
+
+ // Find the closest match from all potential matches
+  if (is_match == true)
+  {
+  float tmp = 99999;
+  for(long unsigned int i = 0; i < v_ohcal_dr.size(); i++){
+    if(v_ohcal_dr[i] < tmp){
+      index = i;
+      tmp = v_ohcal_dr[i];
+    }
+  }
+  }
+
+  // Print out statohents
+  if(index != -1){
+      std::cout<<"matched tracks!!!"<<std::endl;
+      std::cout<<"ohcal x = "<<v_ohcal_x[index]<<" , y = "<<v_ohcal_y[index]<<" , z = "<<v_ohcal_z[index]<<" , phi = "<<v_ohcal_phi[index]<<" , eta = "<<v_ohcal_eta[index]<<std::endl;
+      std::cout<<"track projected x = "<<_track_x_ohc<<" , y = "<<_track_y_ohc<<" , z = "<<_track_z_ohc<<" , phi = "<<_track_phi_ohc<<" , eta = "<<_track_eta_ohc<<std::endl;
+      std::cout<<"track px = "<<track->get_px()<<" , py = "<<track->get_py()<<" , pz = "<<track->get_pz()<<" , pt = "<<track->get_pt()<<" , p = "<<track->get_p()<<" , charge = "<<track->get_charge()<<std::endl;
+
+  }
+
+  // Save values to the branches!
+  detector_ohcal_deltaphi[daughter_id] = v_ohcal_phi[index];
+  detector_ohcal_deltaeta[daughter_id] = v_ohcal_eta[index];
+  detector_ohcal_energy_3x3[daughter_id] = v_ohcal_3x3[index];
+  //detector_ohcal_energy_5x5[daughter_id] = _ohcal_5x5;
+  detector_ohcal_cluster_energy[daughter_id] = v_ohcal_clusE[index];
   // ⭐ Ｅｎｄ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
 
-
-
-  //To be updated when HCal code is written:
-  // detector_ihcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(2));
-  // detector_ihcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(2));
-  // detector_ihcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(2));
-  // detector_ihcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(2));
-  // detector_ihcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(2));
-
-  // detector_ohcal_deltaphi[daughter_id] = track->get_cal_dphi(SvtxTrack::CAL_LAYER(3));
-  // detector_ohcal_deltaeta[daughter_id] = track->get_cal_deta(SvtxTrack::CAL_LAYER(3));
-  // detector_ohcal_energy_3x3[daughter_id] = track->get_cal_energy_3x3(SvtxTrack::CAL_LAYER(3));
-  // detector_ohcal_energy_5x5[daughter_id] = track->get_cal_energy_5x5(SvtxTrack::CAL_LAYER(3));
-  // detector_ohcal_cluster_energy[daughter_id] = track->get_cal_cluster_e(SvtxTrack::CAL_LAYER(3));
 }
 
 void KFParticle_truthAndDetTools::initializeDetectorBranches(TTree *m_tree, int daughter_id, const std::string &daughter_number)
