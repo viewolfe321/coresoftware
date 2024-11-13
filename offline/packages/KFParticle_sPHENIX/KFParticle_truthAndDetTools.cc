@@ -658,7 +658,8 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     clustersEM = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_CEMC");
     if (!clustersEM)
     {
-      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_CEMC" << std::endl;
+      // std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_CEMC" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "CLUSTER_CEMC" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -667,7 +668,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     EMCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_CEMC");
     if(!EMCalGeo)
     {
-      std::cout << "EMCalGeo not found! Aborting!" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "TOWERGEOM_CEMC" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -676,7 +677,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     _towersEM = findNode::getClass<RawTowerContainer>(topNode, "TOWER_CALIB_CEMC");
     if(!_towersEM) 
     {
-      std::cout << "No TOWER_CALIB_CEMC Node" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "TOWER_CALIB_CEMC" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -684,7 +685,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     clustersIH = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_HCALIN");
     if (!clustersIH)
     {
-      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_HCALIN" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "CLUSTER_HCALIN" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -693,7 +694,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     IHCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
     if(!IHCalGeo)
     {
-      std::cout << "IHCalGeo not found! Aborting!" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "TOWERGEOM_HCALIN" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -702,24 +703,24 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     _towersIH = findNode::getClass<RawTowerContainer>(topNode, "TOWER_CALIB_HCALIN");
     if(!_towersIH) 
     {
-      std::cout << "No TOWER_CALIB_HCALIN Node" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "TOWER_CALIB_HCALIN" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
    if ( !clustersOH ) {
-    clustersOH = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_HCALIN");
+    clustersOH = findNode::getClass<RawClusterContainer>(topNode, "CLUSTER_HCALOUT");
     if (!clustersOH)
     {
-      std::cout << "TrackCaloMatch::process_event : FATAL ERROR, cannot find cluster container " << "CLUSTER_HCALIN" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "CLUSTER_HCALOUT" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
   if(!OHCalGeo)
   {
-    OHCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALIN");
+    OHCalGeo = findNode::getClass<RawTowerGeomContainer>(topNode, "TOWERGEOM_HCALOUT");
     if(!OHCalGeo)
     {
-      std::cout << "OHCalGeo not found! Aborting!" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "TOWERGEOM_HCALOUT" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -728,7 +729,7 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
     _towersOH = findNode::getClass<RawTowerContainer>(topNode, "TOWER_CALIB_HCALOUT");
     if(!_towersOH) 
     {
-      std::cout << "No TOWER_CALIB_HCALOUT Node" << std::endl;
+      std::cout << __FILE__ << "::" << __func__ << " : FATAL ERROR, cannot find cluster container " << "TOWER_CALIB_HCALOUT" << std::endl;
       //return Fun4AllReturnCodes::ABORTEVENT;
     }
   }
@@ -862,12 +863,20 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
   }
 
   // Save values to the branches!
+  if(index == -1){
+  detector_emcal_deltaphi[daughter_id] = NAN;
+  detector_emcal_deltaeta[daughter_id] = NAN;
+  detector_emcal_energy_3x3[daughter_id] = NAN;
+  //detector_emcal_energy_5x5[daughter_id] = NAN;
+  detector_emcal_cluster_energy[daughter_id] = NAN;
+  }
+  else{
   detector_emcal_deltaphi[daughter_id] = v_emcal_phi[index];
   detector_emcal_deltaeta[daughter_id] = v_emcal_eta[index];
   detector_emcal_energy_3x3[daughter_id] = v_emcal_3x3[index];
   //detector_emcal_energy_5x5[daughter_id] = _emcal_5x5;
   detector_emcal_cluster_energy[daughter_id] = v_emcal_clusE[index];
-  
+  }
 
 //HCAL*******************************************************
 
@@ -984,13 +993,24 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
       std::cout<<"track px = "<<track->get_px()<<" , py = "<<track->get_py()<<" , pz = "<<track->get_pz()<<" , pt = "<<track->get_pt()<<" , p = "<<track->get_p()<<" , charge = "<<track->get_charge()<<std::endl;
 
   }
-
+  
   // Save values to the branches!
+  if(index == -1){
+  detector_ihcal_deltaphi[daughter_id] = NAN;
+  detector_ihcal_deltaeta[daughter_id] = NAN;
+  detector_ihcal_energy_3x3[daughter_id] = NAN;
+  // detector_ihcal_energy_5x5[daughter_id] = NAN;
+  detector_ihcal_cluster_energy[daughter_id] = NAN;
+  }
+  else{
   detector_ihcal_deltaphi[daughter_id] = v_ihcal_phi[index];
   detector_ihcal_deltaeta[daughter_id] = v_ihcal_eta[index];
   detector_ihcal_energy_3x3[daughter_id] = v_ihcal_3x3[index];
   // detector_ihcal_energy_5x5[daughter_id] = _ihcal_5x5;
   detector_ihcal_cluster_energy[daughter_id] = v_ihcal_clusE[index];
+  }
+
+
 
 
 
@@ -1109,11 +1129,21 @@ void KFParticle_truthAndDetTools::fillCaloBranch(PHCompositeNode *topNode,
   }
 
   // Save values to the branches!
+  if(index == -1){
+  detector_ohcal_deltaphi[daughter_id] = NAN;
+  detector_ohcal_deltaeta[daughter_id] = NAN;
+  detector_ohcal_energy_3x3[daughter_id] = NAN;
+  //detector_ohcal_energy_5x5[daughter_id] = NAN;
+  detector_ohcal_cluster_energy[daughter_id] = NAN;
+  }
+  else{
   detector_ohcal_deltaphi[daughter_id] = v_ohcal_phi[index];
   detector_ohcal_deltaeta[daughter_id] = v_ohcal_eta[index];
   detector_ohcal_energy_3x3[daughter_id] = v_ohcal_3x3[index];
   //detector_ohcal_energy_5x5[daughter_id] = _ohcal_5x5;
   detector_ohcal_cluster_energy[daughter_id] = v_ohcal_clusE[index];
+  }
+
   // ⭐ Ｅｎｄ Ｖａｌｅｒｉｅ＇ｓ ＷＩＰ ⭐
 
 }
