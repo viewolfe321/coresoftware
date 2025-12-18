@@ -5,6 +5,7 @@
 #include <calobase/RawCluster.h>
 #include <calobase/RawClusterContainer.h>
 #include <calobase/RawClusterDefs.h>
+#include <calobase/RawClusterUtility.h> // For clusters
 //Tower 
 #include <calobase/RawTower.h>
 #include <calobase/RawTowerContainer.h>
@@ -75,7 +76,7 @@ class KFParticle_truthAndDetTools
   int getHepMCInfo(PHCompositeNode *topNode, TTree *m_tree, const KFParticle &daughter, int daughter_id);
 
   void initializeCaloBranches(TTree *m_tree, int daughter_id, const std::string &daughter_number);
-  void fillCaloBranch(PHCompositeNode *topNode, TTree *m_tree, const KFParticle &daughter, int daughter_id, bool &isTrackEMCalmatch);
+  void fillCaloBranch(PHCompositeNode *topNode, TTree *m_tree, const KFParticle &daughter, int daughter_id, bool &isTrackEMCalmatch, const KFParticle &vertex);
   void Get5x5CellInfo(RawClusterDefs::keytype key_in, int daughter_id);
 
   void initializeDetectorBranches(TTree *m_tree, int daughter_id, const std::string &daughter_number);
@@ -186,6 +187,9 @@ class KFParticle_truthAndDetTools
   float detector_emcal_energy_3x3[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
   float detector_emcal_energy_5x5[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
   float detector_emcal_cluster_energy[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
+  // float detector_emcal_eta[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
+  // float detector_emcal_phi[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
+  // float detector_emcal_z[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
   float detector_ihcal_deltaphi[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
   float detector_ihcal_deltaeta[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
   float detector_ihcal_energy_3x3[max_tracks]{std::numeric_limits<float>::quiet_NaN()};
